@@ -1,0 +1,24 @@
+{
+  "name": "hammer-simulator",
+  "version": "0.0.0",
+  "description": "Simulator\r =========",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/hammerjs/simulator.git"
+  },
+  "keywords": [
+    "hammer",
+    "gestures",
+    "simulator"
+  ],
+  "author": "J. Tangelder",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hammerjs/simulator/issues"
+  },
+  "homepage": "https://github.com/hammerjs/simulator"
+}
