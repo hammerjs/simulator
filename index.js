@@ -1,4 +1,19 @@
 (function() {
+    /**
+     * return unchanged if array passed, otherwise wrap in an array
+     * @param  {Object|Array|Null} arr any object
+     * @return {Array}
+     */
+    function ensureAnArray (arr) {
+        if (Object.prototype.toString.call(arr) === '[object Array]') {
+            return arr;
+        } else if (arr === null || arr === void 0) {
+            return [];
+        } else {
+            return [arr];
+        }
+    }
+
     var Simulator = {
         type: 'touch',
 
@@ -113,16 +128,31 @@
                         clientY: y,
                         screenX: x,
                         screenY: y,
-                        target: element,
+                        target: touch.target,
                         identifier: i
                     });
                 });
 
                 var event = document.createEvent('Event');
                 event.initEvent('touch' + type, true, true);
-                event.touches = (type == 'end') ? this.emptyTouchList() : touchList;
-                event.targetTouches = (type == 'end') ? this.emptyTouchList() : touchList;
-                event.changedTouches = touchList;
+
+                if (type !== 'end') {
+                    var targetTouches = touchList.filter(function(touch){
+                        return touch.target === element;
+                    })
+
+                    event.changedTouches = targetTouches;
+                } else {
+                    // assume that last touch is released touch. Pop it out from list of touches
+                    event.changedTouches = [touchList.pop()];
+
+                    var targetTouches = touchList.filter(function(touch){
+                        return touch.target === element;
+                    })
+                }
+
+                event.touches = touchList;
+                event.targetTouches = targetTouches;
                 element.dispatchEvent(event);
 
                 renderTouches(touches, element);
@@ -154,15 +184,21 @@
      * @param [radius=100]
      * @param [rotation=0]
      */
-    function getTouches(center, countTouches, radius, rotation) {
+    function getTouches(center, elements, countTouches, radius, rotation) {
         var cx = center[0],
             cy = center[1],
             touches = [],
             slice, i, angle;
 
+        elements = ensureAnArray(elements);
+
         // just one touch, at the center
         if (countTouches === 1) {
-            return [{ x: cx, y: cy }];
+            if (elements.length) {
+                return [{ x: cx, y: cy, target: elements[0] }];
+            } else {
+                return [{ x: cx, y: cy }];
+            }
         }
 
         radius = radius || 100;
@@ -173,7 +209,8 @@
             angle = (slice * i) + rotation;
             touches.push({
                 x: (cx + radius * Math.cos(angle)),
-                y: (cy + radius * Math.sin(angle))
+                y: (cy + radius * Math.sin(angle)),
+                target: elements[i % elements.length]
             });
         }
 
@@ -220,15 +257,17 @@
 
     /**
      * trigger a gesture
-     * @param element
+     * @param elements
      * @param startTouches
      * @param options
      * @param done
      */
-    function triggerGesture(element, startTouches, options, done) {
+    function triggerGesture(elements, startTouches, options, done) {
         var interval = 10,
             loops = Math.ceil(options.duration / interval),
             loop = 1;
+
+        elements = ensureAnArray(elements);
 
         options = merge(options, {
             pos: [10, 10],
@@ -255,17 +294,25 @@
                 posX = options.pos[0] + (options.deltaX / loops * loop) * easing,
                 posY = options.pos[1] + (options.deltaY / loops * loop) * easing,
                 rotation = options.rotation / loops * loop,
-                touches = getTouches([posX, posY], startTouches.length, radius, rotation),
+                touches = getTouches([posX, posY], elements, startTouches.length, radius, rotation),
                 isFirst = (loop == 1),
                 isLast = (loop == loops);
 
-            if (isFirst) {
-                trigger(touches, element, 'start');
-            } else if (isLast) {
-                trigger(touches, element, 'end');
-                return done();
-            } else {
-                trigger(touches, element, 'move');
+            for (var t = touches.length - 1; t >= 0; t--) {
+                if (isFirst) {
+                    trigger(touches, touches[t].target, 'start');
+                } else if (isLast) {
+                    trigger(touches, touches[t].target, 'end');
+
+                    // Remove processed touch
+                    touches.pop()
+
+                    if (touches.length === 0) {
+                        return done();
+                    }
+                } else {
+                    trigger(touches, touches[t].target, 'move');
+                }
             }
 
             setTimeout(gestureLoop, interval);
@@ -288,7 +335,7 @@
                 touches: 1
             });
 
-            var touches = getTouches(options.pos, 1);
+            var touches = getTouches(options.pos, element, 1);
 
             trigger(touches, element, 'start');
             setTimeout(function() {
@@ -310,7 +357,7 @@
                 touches: 1
             });
 
-            var touches = getTouches(options.pos, 1);
+            var touches = getTouches(options.pos, element, 1);
             trigger(touches, element, 'start');
             setTimeout(function() {
                 trigger(touches, element, 'end');
@@ -356,7 +403,7 @@
                 touches: 1
             });
 
-            var touches = getTouches(options.pos, options.touches);
+            var touches = getTouches(options.pos, element, options.touches);
             triggerGesture(element, touches, options, function() {
                 done && setTimeout(done, 25);
             });
@@ -378,7 +425,7 @@
                 easing: 'cubic'
             });
 
-            var touches = getTouches(options.pos, options.touches);
+            var touches = getTouches(options.pos, element, options.touches);
             triggerGesture(element, touches, options, function() {
                 done && setTimeout(done, 25);
             });
@@ -390,7 +437,7 @@
          * @param options
          * @param done
          */
-        pinch: function(element, options, done) {
+        pinch: function(elements, options, done) {
             options = merge(options, {
                 pos: [300, 300],
                 scale: 2,
@@ -399,8 +446,8 @@
                 touches: 2
             });
 
-            var touches = getTouches(options.pos, options.touches);
-            triggerGesture(element, touches, options, function() {
+            var touches = getTouches(options.pos, elements, options.touches);
+            triggerGesture(elements, touches, options, function() {
                 done && setTimeout(done, 25);
             });
         },
@@ -411,7 +458,7 @@
          * @param options
          * @param done
          */
-        rotate: function(element, options, done) {
+        rotate: function(elements, options, done) {
             options = merge(options, {
                 pos: [300, 300],
                 rotation: 180,
@@ -419,8 +466,8 @@
                 touches: 2
             });
 
-            var touches = getTouches(options.pos, options.touches);
-            triggerGesture(element, touches, options, function() {
+            var touches = getTouches(options.pos, elements, options.touches);
+            triggerGesture(elements, touches, options, function() {
                 done && setTimeout(done, 25);
             });
         },
@@ -431,7 +478,7 @@
          * @param options
          * @param done
          */
-        pinchRotate: function(element, options, done) {
+        pinchRotate: function(elements, options, done) {
             options = merge(options, {
                 pos: [300, 300],
                 rotation: 180,
@@ -441,8 +488,8 @@
                 touches: 2
             });
 
-            var touches = getTouches(options.pos, options.touches);
-            triggerGesture(element, touches, options, function() {
+            var touches = getTouches(options.pos, elements, options.touches);
+            triggerGesture(elements, touches, options, function() {
                 done && setTimeout(done, 25);
             });
         }
