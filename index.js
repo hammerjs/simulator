@@ -433,11 +433,12 @@
 
         /**
          * pinch
-         * @param element
+         * @param {HTMLElement|Array} elements
          * @param options
          * @param done
          */
         pinch: function(elements, options, done) {
+            elements = ensureAnArray(elements);
             options = merge(options, {
                 pos: [300, 300],
                 scale: 2,
@@ -454,11 +455,12 @@
 
         /**
          * rotate
-         * @param element
+         * @param {HTMLElement|Array} elements
          * @param options
          * @param done
          */
         rotate: function(elements, options, done) {
+            elements = ensureAnArray(elements);
             options = merge(options, {
                 pos: [300, 300],
                 rotation: 180,
@@ -474,11 +476,12 @@
 
         /**
          * combination of pinch and rotate
-         * @param element
+         * @param {HTMLElement|Array} elements
          * @param options
          * @param done
          */
         pinchRotate: function(elements, options, done) {
+            elements = ensureAnArray(elements);
             options = merge(options, {
                 pos: [300, 300],
                 rotation: 180,
