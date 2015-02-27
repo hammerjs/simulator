@@ -230,8 +230,8 @@
             el.style.height = '20px';
             el.style.background = 'red';
             el.style.position = 'fixed';
-            el.style.top = touch.x +'px';
-            el.style.left = touch.y +'px';
+            el.style.top = touch.y +'px';
+            el.style.left = touch.x +'px';
             el.style.borderRadius = '100%';
             el.style.border = 'solid 2px #000';
             el.style.zIndex = 6000;
